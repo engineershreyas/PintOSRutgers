@@ -476,7 +476,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   t->original_priority = priority;
   t->w_lock = NULL;
-  list_init(&t->locks);
+  list_init(&t->donations);
   list_push_back (&all_list, &t->allelem);
 
 }
@@ -611,7 +611,7 @@ void ready_list_reload(void){
   list_sort(&ready_list,(list_less_func *) &priority_comparison, NULL);
 }
 
-void priority_donate(){
+void priority_donate(void){
 
   int current_nests = 0;
 
@@ -621,9 +621,9 @@ void priority_donate(){
   //while the lock exists and we haven't reached the max number of nests
   while(l != NULL && current_nests < MAX_NESTED){
 
-    if(lock->holder == NULL) return;
+    if(curr_lock->holder == NULL) return;
 
-    struct thread *other = lock->holder;
+    struct thread *other = curr_lock->holder;
 
     if(other->priority < t->priority){
       other->priority = t->priority;
@@ -636,12 +636,11 @@ void priority_donate(){
 
   }
 
-  void priority_reinstate(){
-    struct thread *t = thread_current();
 
-    t->priority = t->original_priority;
-  }
+}
 
+void priority_reinstate(void){
+  struct thread *t = thread_current();
 
-
+  t->priority = t->original_priority;
 }

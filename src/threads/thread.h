@@ -147,6 +147,7 @@ int thread_get_load_avg (void);
 
 bool priority_comparison(void *aux UNUSED,const struct list_elem *a, const struct list_elem *b);
 void ready_list_reload(void);
-void priority_donate();
+void priority_donate(void);
+void priority_reinstate(void);
 
 #endif /* threads/thread.h */
