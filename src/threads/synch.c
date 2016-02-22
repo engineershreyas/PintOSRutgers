@@ -70,9 +70,9 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0)
     {
+      priority_donate();
       list_push_back (&sema->waiters, &thread_current ()->elem);
       list_sort(&sema->waiters,(list_less_func *) &priority_comparison, NULL);
-      priority_donate();
       thread_block ();
     }
   sema->value--;
@@ -117,9 +117,12 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters))
+  if (!list_empty (&sema->waiters)){
+    struct list *waiters = &sema->waiters;
+    list_sort(waiters,(list_less_func *)priority_comparison,NULL);
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
+                              }
   sema->value++;
   intr_set_level (old_level);
 }
@@ -199,12 +202,15 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-  //thread is waiting on lock
-  thread_current()->w_lock = lock;
+
+  if(lock->holder != NULL){
+    thread_current()->w_lock = lock;
+    list_push_back(&lock->holder->donations,&thread_current()->d_elem)
+    list_sort(&lock->holder->donations,(list_less_func *)priority_comparison,NULL);
+  }
   sema_down (&lock->semaphore);
   //thread is done waiting for lock, so add lock to list of acquired locks
   thread_current()->w_lock = NULL;
-  list_push_back(&thread_current()->locks,&lock->elem);
   lock->holder = thread_current ();
 }
 
@@ -224,10 +230,8 @@ lock_try_acquire (struct lock *lock)
 
   success = sema_try_down (&lock->semaphore);
   if (success){
-    lock->holder = thread_current();
-    //the thread is no longer waiting on the lock because it is acquiring it
     thread_current()->w_lock = NULL;
-    list_push_back(&thread_current()->locks,&lock->elem);
+    lock->holder = thread_current();
 
   }
   return success;
@@ -246,7 +250,17 @@ lock_release (struct lock *lock)
 
   lock->holder = NULL;
   //remove lock from thr acquire locks list that thread has
-  list_remove(&lock->elem);
+  struct list *d_list = &thread_current()->donations;
+  struct list_elem *elem = list_begin(d_list);
+  while(elem != list_end(d_list)){
+    struct thread *t = list_entry(elem,struct thread,d_elem);
+    struct thread *n = list_next(elem);
+    if(t->w_lock == lock){
+      list_remove(elem);
+    }
+    elem = n;
+  }
+  priority_reinstate();
   sema_up (&lock->semaphore);
 }
 
