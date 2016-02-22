@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -90,6 +91,10 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+
+    int original_priority;              /*reference to threads original priority for priority donation*/
+    struct lock *w_lock;                /*lock that thread has to wait on*/
+    struct list *locks;                 /*list of locks that thread has acquired*/
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
