@@ -15,6 +15,8 @@
 #include "userprog/process.h"
 #endif
 
+#define MAX_NESTED 8
+
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -607,4 +609,39 @@ void ready_list_reload(void){
   ASSERT(!list_empty(&ready_list));
   //sort list based on priority
   list_sort(&ready_list,(list_less_func *) &priority_comparison, NULL);
+}
+
+void priority_donate(){
+
+  int current_nests = 0;
+
+  struct thead *t = thread_current();
+  struct lock *curr_lock = t->w_lock;
+
+  //while the lock exists and we haven't reached the max number of nests
+  while(l != NULL && current_nests < MAX_NESTED){
+
+    if(lock->holder == NULL) return;
+
+    struct thread *other = lock->holder;
+
+    if(other->priority < t->priority){
+      other->priority = t->priority;
+      t = other;
+      l = t->w_lock;
+    }
+    else{
+      return;
+    }
+
+  }
+
+  void priority_reinstate(){
+    struct thread *t = thread_current();
+
+    t->priority = t->original_priority;
+  }
+
+
+
 }
