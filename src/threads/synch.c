@@ -320,7 +320,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   sema_init (&waiter.semaphore, 0);
-  list_push_back (&cond->waiters, &waiter.elem);
+  list_insert_ordered(&cond->waiters,&waiter.elem, (list_less_func *) &semaphore_priority_comparison, NULL);
   lock_release (lock);
   sema_down (&waiter.semaphore);
   lock_acquire (lock);
@@ -341,9 +341,11 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
 
-  if (!list_empty (&cond->waiters))
+  if (!list_empty (&cond->waiters)){
+    list_sort(&cond->waiters, (list_less_func *) &semaphore_priority_comparison, NULL);
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
+                        }
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
@@ -360,4 +362,28 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
+}
+
+{
+  struct semaphore_elem *elem_one = list_entry(a,struct semaphore_elem, elem);
+  struct semaphore_elem *elem_two = list_entry(b,struct semaphore_elem,elem);
+
+  bool isEmptyA = list_empty(&elem_one->semaphore.waiters);
+
+  if(emptyA) return false;
+
+  bool isEmptyB = list_empty(&elem_two->semaphore.waiters);
+
+  if(emptyB) return false;
+
+  struct list_less_func* func = (list_less_func *) &priority_comparison;
+
+  list_sort(&elem_one->semaphore.waiters, func, NULL);
+  list_sort(&elem_two->semaphore.waiters, func, NULL);
+
+  struct thread *t_one = list_entry(list_front(&elem_one->semaphore.waiters), struct thread, elem);
+  struct thread *t_two = list_entry(list_front(&elem_two->semaphore.waiters),struct thread, elem);
+
+  return t_one->priority > t_two->priority;
+
 }
