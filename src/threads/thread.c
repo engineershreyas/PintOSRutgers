@@ -628,7 +628,7 @@ void priority_donate(void){
     if(other->priority < t->priority){
       other->priority = t->priority;
       t = other;
-      l = t->w_lock;
+      curr_lock = t->w_lock;
     }
     else{
       return;
