@@ -366,6 +366,7 @@ cond_broadcast (struct condition *cond, struct lock *lock)
     cond_signal (cond, lock);
 }
 
+//method to compare priorties of semaphores
 bool semaphore_priority_comparison (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct semaphore_elem *elem_one = list_entry(a,struct semaphore_elem, elem);
