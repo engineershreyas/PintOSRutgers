@@ -585,3 +585,11 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+// //gets the ticks member function from a thread so that we may order it within a list
+// //written by cedric blake
+bool get_ticks_from_thread_list(struct list_elem *elemA, struct list_elem *elemB, void* aux UNUSED) {
+  struct thread *elemAThread = list_entry(elemA, struct thread, elem);
+  struct thread *elemBThread = list_entry(elemB, struct thread, elem);
+  return (elemAThread->ticksToWait < elemBThread->ticksToWait);
+}

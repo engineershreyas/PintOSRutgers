@@ -139,4 +139,7 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+// //written by cedric blake
+bool get_ticks_from_thread_list(struct list_elem *elemA, struct list_elem *elemB, void* aux UNUSED);
+
 #endif /* threads/thread.h */

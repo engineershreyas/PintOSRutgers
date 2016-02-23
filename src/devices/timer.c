@@ -97,20 +97,20 @@ void
 timer_sleep (int64_t ticks) 
 {
   int64_t start = timer_ticks (); //# of ticks since os booted
-  printf("Timer Sleep called\n");
+  //printf("Timer Sleep called\n");
   ASSERT (intr_get_level () == INTR_ON);
   // while (timer_elapsed (start) < ticks) 
   //   thread_yield ();
   enum intr_level oldLevel = intr_disable();
-  printf("acquired lock\n");
+  //printf("acquired lock\n");
   //do not use try aquire, as that function will implement busy waiting to acquire the lock
   //lock_acquire(&waitingLock); //beginning of critical section
   thread_current()->ticksToWait = start + ticks;
   //try using an arpentrary value to insert like ints or bools first
-  list_push_back(&waitingList ,&thread_current()->elem);
-  printf("the size of the list is %i\n", list_size(&waitingList));
+  list_insert_ordered(&waitingList ,&thread_current()->elem, get_ticks_from_thread_list, NULL);
+  //printf("the size of the list is %i\n", list_size(&waitingList));
   //lock_release(&waitingLock); //end of critical section
-  printf("blocking thread\n");
+  //printf("blocking thread\n");
   //must include disable of interrupts so that os does not stop performing the thread block command
   thread_block();
   intr_set_level(oldLevel);
@@ -192,22 +192,21 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  int64_t now = timer_ticks();
   /*checks every thread in waitingList sees if "now" is equal to the summation of the
   time that the thread went to sleep and the time set for the thread to wake up */
   //printf("the size of the list is %i\n", list_size(&waitingList));
   enum intr_level oldLevel = intr_disable();
   struct list_elem *i;
+  int64_t now = timer_ticks();
   for (i = list_begin(&waitingList); i != list_end(&waitingList);) {
     struct thread *currentThread = list_entry(i, struct thread, elem);
     if (now >= currentThread->ticksToWait) {
       count++;
-      printf("unblocking thread. count = %i\n", count);
+      //printf("unblocking thread. count = %i\n", count);
       i = list_remove(i);
       thread_unblock(currentThread);
-    } else {
-      //printf("moving to next thread \n");
-      i = list_next(i);
+    } else if (now < currentThread->ticksToWait) {
+      break;
     }
   }
   //set to specific value that was before the interrupt handler
