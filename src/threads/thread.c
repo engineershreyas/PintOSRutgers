@@ -616,8 +616,8 @@ bool priority_comparison(void *aux UNUSED,const struct list_elem *a,const struct
 
 /*method to donate priority
 * the method looks at the lock that the current thread is waiting on
-* then, it at the thread holding the lock and if that threads priority is less
-* than the current threads priority, then that thread get current threads priority_donate
+* then, it looks at the thread holding the lock and if that threads priority is less
+* than the current threads priority, then that thread gets current threads priority
 * this keeps on going untl 8 levels are reached (can be changed in macro)
 */
 void priority_donate(void){
@@ -629,6 +629,8 @@ void priority_donate(void){
 
   //while the lock exists and we haven't reached the max number of nests
   while(curr_lock != NULL && current_nests < MAX_NESTED){
+
+    current_nests++;
 
     if(curr_lock->holder == NULL) return;
 
