@@ -615,11 +615,11 @@ void priority_donate(void){
 
   int current_nests = 0;
 
-  struct thead *t = thread_current();
+  struct thread *t = thread_current();
   struct lock *curr_lock = t->w_lock;
 
   //while the lock exists and we haven't reached the max number of nests
-  while(l != NULL && current_nests < MAX_NESTED){
+  while(curr_lock != NULL && current_nests < MAX_NESTED){
 
     if(curr_lock->holder == NULL) return;
 
