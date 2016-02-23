@@ -250,7 +250,7 @@ lock_release (struct lock *lock)
   struct list_elem *elem = list_begin(&thread_current()->donations);
   while(elem != list_end(&thread_current()->donations)){
     struct thread *t = list_entry(elem,struct thread,d_elem);
-    struct thread *n = list_next(elem);
+    struct list_elem *n = list_next(elem);
     if(t->w_lock == lock){
       list_remove(elem);
     }
@@ -364,6 +364,7 @@ cond_broadcast (struct condition *cond, struct lock *lock)
     cond_signal (cond, lock);
 }
 
+bool semaphore_priority_comparison (void *aux UNUSED, const struct list_elem *a, const struct list_elem *b)
 {
   struct semaphore_elem *elem_one = list_entry(a,struct semaphore_elem, elem);
   struct semaphore_elem *elem_two = list_entry(b,struct semaphore_elem,elem);
