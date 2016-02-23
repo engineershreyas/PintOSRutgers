@@ -205,7 +205,7 @@ lock_acquire (struct lock *lock)
 
   if(lock->holder != NULL){
     thread_current()->w_lock = lock;
-    list_push_back(&lock->holder->donations,&thread_current()->d_elem)
+    list_push_back(&lock->holder->donations,&thread_current()->d_elem);
     list_sort(&lock->holder->donations,(list_less_func *)priority_comparison,NULL);
   }
   sema_down (&lock->semaphore);
@@ -250,7 +250,7 @@ lock_release (struct lock *lock)
 
   lock->holder = NULL;
   //remove lock from thr acquire locks list that thread has
-  struct list *d_list = &thread_current()->donations;
+  struct list d_list = &thread_current()->donations;
   struct list_elem *elem = list_begin(d_list);
   while(elem != list_end(d_list)){
     struct thread *t = list_entry(elem,struct thread,d_elem);
