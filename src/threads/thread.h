@@ -94,8 +94,8 @@ struct thread
 
     int original_priority;              /*reference to threads original priority for priority donation*/
     struct lock *w_lock;                /*lock that thread has to wait on*/
-    struct list donations;
-    struct list_elem d_elem;                 /*list of locks that thread has acquired*/
+    struct list donations;              /*list of threads donated to*/
+    struct list_elem d_elem;            /* element referencing thread in donation list*/
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -145,8 +145,8 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+//priority scheduling methods
 bool priority_comparison(void *aux UNUSED,const struct list_elem *a, const struct list_elem *b);
-void ready_list_reload(void);
 void priority_donate(void);
 void priority_reinstate(void);
 

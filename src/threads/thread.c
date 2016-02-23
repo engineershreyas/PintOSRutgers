@@ -602,13 +602,15 @@ bool priority_comparison(void *aux UNUSED,const struct list_elem *a,const struct
   return false;
 }
 
-void ready_list_reload(void){
-  //make sure that list is not empty before we sort it
-  ASSERT(!list_empty(&ready_list));
-  //sort list based on priority
-  list_sort(&ready_list,(list_less_func *) &priority_comparison, NULL);
-}
 
+
+
+/*method to donate priority
+* the method looks at the lock that the current thread is waiting on
+* then, it at the thread holding the lock and if that threads priority is less
+* than the current threads priority, then that thread get current threads priority_donate
+* this keeps on going untl 8 levels are reached (can be changed in macro)
+*/
 void priority_donate(void){
 
   int current_nests = 0;
@@ -637,6 +639,7 @@ void priority_donate(void){
 
 }
 
+//method to make sure that thread get it's original priority back
 void priority_reinstate(void){
   struct thread *t = thread_current();
 
@@ -646,7 +649,7 @@ void priority_reinstate(void){
 
   if(isEmpty) return;
 
-  struct thread *s = list_entry(list_front(&t->donations),struct thread,d_elem);
-  if(s->priority > t->priority) t->priority = s->priority;
+  struct thread *latter = list_entry(list_front(&t->donations),struct thread,d_elem);
+  if(latter->priority > t->priority) t->priority = latter->priority;
 
 }
