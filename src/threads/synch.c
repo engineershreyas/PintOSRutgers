@@ -278,6 +278,8 @@ struct semaphore_elem
     struct semaphore semaphore;         /* This semaphore. */
   };
 
+bool semaphore_priority_comparison (void *aux UNUSED,const struct list_elem *a, const struct list_elem *b);
+
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating
    code to receive the signal and act upon it. */
@@ -377,7 +379,7 @@ bool semaphore_priority_comparison (void *aux UNUSED, const struct list_elem *a,
 
   if(isEmptyB) return false;
 
-  
+
 
   list_sort(&elem_one->semaphore.waiters, (list_less_func *) &priority_comparison, NULL);
   list_sort(&elem_two->semaphore.waiters, (list_less_func *) &priority_comparison, NULL);
