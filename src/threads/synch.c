@@ -278,7 +278,7 @@ struct semaphore_elem
     struct semaphore semaphore;         /* This semaphore. */
   };
 
-bool semaphore_priority_comparison (void *aux UNUSED,const struct list_elem *a, const struct list_elem *b);
+bool semaphore_priority_comparison (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating
@@ -366,7 +366,7 @@ cond_broadcast (struct condition *cond, struct lock *lock)
     cond_signal (cond, lock);
 }
 
-bool semaphore_priority_comparison (void *aux UNUSED, const struct list_elem *a, const struct list_elem *b)
+bool semaphore_priority_comparison (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct semaphore_elem *elem_one = list_entry(a,struct semaphore_elem, elem);
   struct semaphore_elem *elem_two = list_entry(b,struct semaphore_elem,elem);
