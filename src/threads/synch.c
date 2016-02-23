@@ -377,10 +377,10 @@ bool semaphore_priority_comparison (void *aux UNUSED, const struct list_elem *a,
 
   if(isEmptyB) return false;
 
-  struct list_less_func* func = (list_less_func *) &priority_comparison;
+  
 
-  list_sort(&elem_one->semaphore.waiters, func, NULL);
-  list_sort(&elem_two->semaphore.waiters, func, NULL);
+  list_sort(&elem_one->semaphore.waiters, (list_less_func *) &priority_comparison, NULL);
+  list_sort(&elem_two->semaphore.waiters, (list_less_func *) &priority_comparison, NULL);
 
   struct thread *t_one = list_entry(list_front(&elem_one->semaphore.waiters), struct thread, elem);
   struct thread *t_two = list_entry(list_front(&elem_two->semaphore.waiters),struct thread, elem);
