@@ -4,6 +4,8 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -84,12 +86,17 @@ struct thread
   {
     /* Owned by thread.c. */
     tid_t tid;                          /* Thread identifier. */
-    int64_t ticksToWait;
+    int64_t ticksToWait;                /* The number of ticks past the current tick to sleep */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+
+    int original_priority;              /*reference to threads original priority for priority donation*/
+    struct lock *w_lock;                /*lock that thread has to wait on*/
+    struct list donations;              /*list of threads donated to*/
+    struct list_elem d_elem;            /* element referencing thread in donation list*/
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -139,7 +146,16 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+/* git merge conflict occured here, keeping all functions */
+
 // //written by cedric blake
 bool get_ticks_from_thread_list(struct list_elem *elemA, struct list_elem *elemB, void* aux UNUSED);
+
+//priority scheduling methods
+bool priority_comparison(void *aux UNUSED,const struct list_elem *a, const struct list_elem *b);
+void priority_donate(void);
+void priority_reinstate(void);
+
+/* end of git merge confilict */
 
 #endif /* threads/thread.h */
