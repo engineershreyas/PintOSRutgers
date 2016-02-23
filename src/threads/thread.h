@@ -152,7 +152,7 @@ int thread_get_load_avg (void);
 bool get_ticks_from_thread_list(struct list_elem *elemA, struct list_elem *elemB, void* aux UNUSED);
 
 //priority scheduling methods
-bool priority_comparison(void *aux UNUSED,const struct list_elem *a, const struct list_elem *b);
+bool priority_comparison(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 void priority_donate(void);
 void priority_reinstate(void);
 

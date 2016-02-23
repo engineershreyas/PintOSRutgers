@@ -601,9 +601,10 @@ bool get_ticks_from_thread_list(struct list_elem *elemA, struct list_elem *elemB
   struct thread *elemAThread = list_entry(elemA, struct thread, elem);
   struct thread *elemBThread = list_entry(elemB, struct thread, elem);
   return (elemAThread->ticksToWait < elemBThread->ticksToWait);
+}
 
 //method to check which thread has a higher priority
-bool priority_comparison(void *aux UNUSED,const struct list_elem *a,const struct list_elem *b){
+bool priority_comparison(const struct list_elem *a,const struct list_elem *b, void *aux UNUSED){
 
   struct thread *t1 = list_entry(a, struct thread, elem);
   struct thread *t2 = list_entry(b, struct thread, elem);
