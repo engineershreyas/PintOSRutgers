@@ -251,7 +251,7 @@ lock_release (struct lock *lock)
   lock->holder = NULL;
   //remove lock from thr acquire locks list that thread has
 
-  struct list_elem *elem = list_begin(&thread_current()->donations;);
+  struct list_elem *elem = list_begin(&thread_current()->donations);
   while(elem != list_end(&thread_current()->donations;)){
     struct thread *t = list_entry(elem,struct thread,d_elem);
     struct thread *n = list_next(elem);
