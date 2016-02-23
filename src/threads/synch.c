@@ -371,11 +371,11 @@ bool semaphore_priority_comparison (void *aux UNUSED, const struct list_elem *a,
 
   bool isEmptyA = list_empty(&elem_one->semaphore.waiters);
 
-  if(emptyA) return false;
+  if(isEmptyA) return false;
 
   bool isEmptyB = list_empty(&elem_two->semaphore.waiters);
 
-  if(emptyB) return false;
+  if(isEmptyB) return false;
 
   struct list_less_func* func = (list_less_func *) &priority_comparison;
 
