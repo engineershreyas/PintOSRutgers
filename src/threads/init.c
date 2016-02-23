@@ -22,6 +22,7 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+#include "threads/synch.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -77,7 +78,7 @@ int
 main (void)
 {
   char **argv;
-
+  
   /* Clear BSS. */  
   bss_init ();
 
@@ -131,6 +132,14 @@ main (void)
   
   /* Run actions specified on kernel command line. */
   run_actions (argv);
+
+  /* initialize locks, by Cedric Blake */
+  //must allocate memory for every lock
+  //NOTE: the locks are commented out in the timer.c file for now
+  malloc(2 * sizeof(struct lock));
+  printf("lock initialized");
+  lock_init(&waitingLock);
+  lock_init(&releaseLock);
 
   /* Finish up. */
   shutdown ();

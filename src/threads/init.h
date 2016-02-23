@@ -6,6 +6,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+//lock to enter the wait queue
+static struct lock waitingLock;
+
+//lock to exit wait queue
+static struct lock releaseLock;
+
 /* Page directory with kernel mappings only. */
 extern uint32_t *init_page_dir;
 

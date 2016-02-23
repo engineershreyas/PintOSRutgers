@@ -7,8 +7,12 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "lib/kernel/list.h"
+#include "threads/init.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
+
+int count;
 
 #if TIMER_FREQ < 19
 #error 8254 timer requires TIMER_FREQ >= 19
@@ -19,6 +23,9 @@
 
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
+
+//waiting line for blocked threads. will implement as a queue
+struct list waitingList = LIST_INITIALIZER(waitingList);
 
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
@@ -75,7 +82,7 @@ timer_ticks (void)
   intr_set_level (old_level);
   return t;
 }
-
+  
 /* Returns the number of timer ticks elapsed since THEN, which
    should be a value once returned by timer_ticks(). */
 int64_t
@@ -89,11 +96,24 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
-
+  int64_t start = timer_ticks (); //# of ticks since os booted
+  printf("Timer Sleep called\n");
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  // while (timer_elapsed (start) < ticks) 
+  //   thread_yield ();
+  enum intr_level oldLevel = intr_disable();
+  printf("acquired lock\n");
+  //do not use try aquire, as that function will implement busy waiting to acquire the lock
+  //lock_acquire(&waitingLock); //beginning of critical section
+  thread_current()->ticksToWait = start + ticks;
+  //try using an arpentrary value to insert like ints or bools first
+  list_push_back(&waitingList ,&thread_current()->elem);
+  printf("the size of the list is %i\n", list_size(&waitingList));
+  //lock_release(&waitingLock); //end of critical section
+  printf("blocking thread\n");
+  //must include disable of interrupts so that os does not stop performing the thread block command
+  thread_block();
+  intr_set_level(oldLevel);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -172,6 +192,26 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  int64_t now = timer_ticks();
+  /*checks every thread in waitingList sees if "now" is equal to the summation of the
+  time that the thread went to sleep and the time set for the thread to wake up */
+  //printf("the size of the list is %i\n", list_size(&waitingList));
+  enum intr_level oldLevel = intr_disable();
+  struct list_elem *i;
+  for (i = list_begin(&waitingList); i != list_end(&waitingList);) {
+    struct thread *currentThread = list_entry(i, struct thread, elem);
+    if (now >= currentThread->ticksToWait) {
+      count++;
+      printf("unblocking thread. count = %i\n", count);
+      i = list_remove(i);
+      thread_unblock(currentThread);
+    } else {
+      //printf("moving to next thread \n");
+      i = list_next(i);
+    }
+  }
+  //set to specific value that was before the interrupt handler
+  intr_set_level(oldLevel);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -244,3 +284,7 @@ real_time_delay (int64_t num, int32_t denom)
   ASSERT (denom % 1000 == 0);
   busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
 }
+
+/*References
+http://stackoverflow.com/questions/646828/error-when-compiling-c-program
+*/
