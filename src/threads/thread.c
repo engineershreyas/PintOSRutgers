@@ -643,4 +643,12 @@ void priority_reinstate(void){
   struct thread *t = thread_current();
 
   t->priority = t->original_priority;
+
+  bool isEmpty = list_empty(&t->donations);
+
+  if(isEmpty) return;
+
+  struct thread *s = list_entry(list_front(&t->donations),struct thread,d_elem);
+  if(s->priority > t->priority) t->priority = s->priority;
+
 }
