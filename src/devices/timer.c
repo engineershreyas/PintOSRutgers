@@ -96,6 +96,9 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
+  if (ticks <= 0) {
+    return;
+  }
   int64_t start = timer_ticks (); //# of ticks since os booted
   //printf("Timer Sleep called\n");
   ASSERT (intr_get_level () == INTR_ON);
@@ -106,6 +109,7 @@ timer_sleep (int64_t ticks)
   //do not use try aquire, as that function will implement busy waiting to acquire the lock
   //lock_acquire(&waitingLock); //beginning of critical section
   thread_current()->ticksToWait = start + ticks;
+  //printf("the priority of this thread is %i\n", thread_current()->priority);
   //try using an arpentrary value to insert like ints or bools first
   list_insert_ordered(&waitingList ,&thread_current()->elem, get_ticks_from_thread_list, NULL);
   //printf("the size of the list is %i\n", list_size(&waitingList));
@@ -190,14 +194,17 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+  enum intr_level oldLevel = intr_disable();
   ticks++;
   thread_tick ();
   /*checks every thread in waitingList sees if "now" is equal to the summation of the
   time that the thread went to sleep and the time set for the thread to wake up */
   //printf("the size of the list is %i\n", list_size(&waitingList));
-  enum intr_level oldLevel = intr_disable();
   struct list_elem *i;
   int64_t now = timer_ticks();
+  if (list_empty(&waitingList)) {
+    return;
+  }
   for (i = list_begin(&waitingList); i != list_end(&waitingList);) {
     struct thread *currentThread = list_entry(i, struct thread, elem);
     if (now >= currentThread->ticksToWait) {
