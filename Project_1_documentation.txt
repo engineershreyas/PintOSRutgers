@@ -9,7 +9,7 @@
 >> Fill in the names and email addresses of your group members.
 
 Cedric Blake <cedricblake48@gmail.com>
-FirstName LastName <netid@scarletmail.rutgers.edu>
+Jonathan Cheng <jac647@scarletmail.rutgers.edu>
 FirstName LastName <netid@scarletmail.rutgers.edu>
 
 ---- PRELIMINARIES ----
@@ -152,6 +152,9 @@ max amount of nests are reached.
 
 >> B5: Describe a potential race in thread_set_priority() and explain
 >> how your implementation avoids it.
+Our implementation in thread_set_priority is set up so that the thread of a current priority is set to a new priority. We then compare the priorities to see if the new priority is greater than the original priority. There are if-statement conditions that compare the priorities so that the thread can either yield or donate its priority. A possible race condition could be if two threads were to compete, it may create a deadlock. We utilize locks and iterations through the threads that are prioritizeto ensure that the priority is set correctly. 
+
+
 
 ---- RATIONALE ----
 
