@@ -346,14 +346,48 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
+  //capture thread's original priority value (below)
+   int original_priority = thread_current()->priority;
+   //current thread is reassigned priority value (below)
+   thread_current ()->priority = new_priority;
+  //prioritize again
+   priority_reinstate();
+   //if-statement to compare new priority of current_thread to first element in the stack (below)
+   if(original_priority < new_priority) { //if current thread no longer has higher priority
+       priority_donate();
+
+   }
+
+   else if (original_priority > new_priority)
+     {
+       if ( list_empty(&ready_list) )
+     {
+       return;
+     }
+
+   struct thread *t = list_entry(list_front(&ready_list), struct thread, elem);
+
+   if (thread_current()->priority < t->priority)
+
+    {
+       thread_yield();
+     }
+
+     }
+   intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void)
 {
-  return thread_current ()->priority;
+  //according to the documentation, disables interrupts; returns prev. interrupt status
+  enum intr_level old level = intr_disable();
+  //get priority og the thread
+  int the_thread = thread_current ()->priority;
+  //enables interrupts on old_level and returns prev. interrupt status
+  intr_set_level(old_level);
+  return the_thread;
 }
 
 /* Sets the current thread's nice value to NICE. */

@@ -3,14 +3,14 @@
             | PROJECT 1: THREADS |
             |   DESIGN DOCUMENT  |
             +--------------------+
-                   
+
 ---- GROUP ----
 
 >> Fill in the names and email addresses of your group members.
 
 Cedric Blake <cedricblake48@gmail.com>
 Jonathan Cheng <jac647@scarletmail.rutgers.edu>
-FirstName LastName <netid@scarletmail.rutgers.edu>
+Shreyas Hirday <ssh90@scarletmail.rutgers.edu>
 
 ---- PRELIMINARIES ----
 
@@ -34,7 +34,7 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-  
+
     struct list_elem d_elem;            /* element referencing thread in donation list*/
 
     /* Shared between thread.c and synch.c. */
@@ -52,21 +52,21 @@ struct thread
 
 struct list waitingList = LIST_INITIALIZER(waitingList);
 
-added the "ticksToWait" function to the thread struct so that each thread can store the tick time that they are supposed to 
+added the "ticksToWait" function to the thread struct so that each thread can store the tick time that they are supposed to
 wake up.
 
-"waitingList" stores each thread that needs to sleep in order of their wake up time so that the interrupt can access and 
+"waitingList" stores each thread that needs to sleep in order of their wake up time so that the interrupt can access and
 wake up the threads.
 
 ---- ALGORITHMS ----
 
 the thread that calls timer_sleep will have a tick value stored which tells the thread when to wake up.
-The thread is then pushed to the waiting queue in oreder based on the threads designated wake up time. 
+The thread is then pushed to the waiting queue in oreder based on the threads designated wake up time.
 Before the thread is blocked, interrupts are disabled so that the thread blocking instruction cannot be interrupted by an external handeler.
 at the end of the function we re-enable the interrupts based on the original interrupt level before
 the thread was called. As for the interrupt handler, external interrupts are once again disabled
 so that threads can be unblocked without being interrupted. once that happens, we iterate through the list
-to see if any threads are ready to wake up. If so, we wake up every thread that is designated to wake up at that 
+to see if any threads are ready to wake up. If so, we wake up every thread that is designated to wake up at that
 particular time.
 
 
@@ -74,7 +74,7 @@ particular time.
 
 we avoid race conditions when we implement the variable required to store a threads wake up time as a member variable
 of the thread struct. this allow each thread to individually track when they need to wake up rather than having
-all threads access a global variable. In addition, implementing the global list variable as an ordered list based on 
+all threads access a global variable. In addition, implementing the global list variable as an ordered list based on
 the wake up tick count of each thread elimiates the ambiguity of the thread placement within the list. because of this
 ordering, regardles of which thread accesses timer_sleep() first, the threads that need to wake up sooner will always
 be pushed towards the front of the list and the threads that wake up later will be pushed towards the back. Finally, we impliment
@@ -87,10 +87,10 @@ the interrupts right before the function returns.
 This design allows multiple sleeping threads to be accessed by the interrupt handler at every tick. this means that
 if multiple threads need to wake up on the same tick, then they can simply by iterating over the list with a for
 loop. I specifically chose to implement the data structure as an ordered list rather than
-an unordered list because when threads need to wake up, in stead of having to chech every single 
-thread in the list, we only need to check the threads whose wake up tick count is 
+an unordered list because when threads need to wake up, in stead of having to chech every single
+thread in the list, we only need to check the threads whose wake up tick count is
 less than that of the current tick count. In addition, we can tell if we need to wake any threads up simply by looking at
-the first element of the list. If the wake up tick count of that thread is greater than the current thread ticks, then we 
+the first element of the list. If the wake up tick count of that thread is greater than the current thread ticks, then we
 do not need to wake up any threads in this call of the interrupt handeler. Implementing an ordered list saves clock cycles to execute
 more important code.
 
@@ -152,7 +152,7 @@ max amount of nests are reached.
 
 >> B5: Describe a potential race in thread_set_priority() and explain
 >> how your implementation avoids it.
-Our implementation in thread_set_priority is set up so that the thread of a current priority is set to a new priority. We then compare the priorities to see if the new priority is greater than the original priority. There are if-statement conditions that compare the priorities so that the thread can either yield or donate its priority. A possible race condition could be if two threads were to compete, it may create a deadlock. We utilize locks and iterations through the threads that are prioritizeto ensure that the priority is set correctly. 
+Our implementation in thread_set_priority is set up so that the thread of a current priority is set to a new priority. We then compare the priorities to see if the new priority is greater than the original priority. There are if-statement conditions that compare the priorities so that the thread can either yield or donate its priority. A possible race condition could be if two threads were to compete, it may create a deadlock. We utilize locks and iterations through the threads that are prioritizeto ensure that the priority is set correctly.
 
 
 
@@ -173,7 +173,7 @@ the quarter.
 
 >> In your opinion, was this assignment, or any one of the three problems
 >> in it, too easy or too hard? Did it take too long or too little time?
-    
+
     Cedric - The biggest issue with this assignment was that we had no prior formal teaching of
     the subject of threads and thread programming, so everything had to be figured out from scratch
     which resulted huge amount of time consumed just to understand how to program threads syntax wise.
