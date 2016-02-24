@@ -374,7 +374,7 @@ thread_set_priority (int new_priority)
      }
 
      }
-   
+
 }
 
 /* Returns the current thread's priority. */
@@ -382,7 +382,7 @@ int
 thread_get_priority (void)
 {
   //according to the documentation, disables interrupts; returns prev. interrupt status
-  enum intr_level old _evel = intr_disable();
+  enum intr_level old_level = intr_disable();
   //get priority og the thread
   int the_thread = thread_current ()->priority;
   //enables interrupts on old_level and returns prev. interrupt status
