@@ -125,6 +125,14 @@ struct thread
 
 >> B2:
 
+------------    locks held   ------------                 ------------
+|          |  ------------>  |          |                 |          |
+| Thread   |   lock storage  |   Lock   |  ---------->    | Semaphore|
+|          |  <------------- |          |                 |          |
+|          |                 ------------                 |          |
+|          |  <----------------------------------------   ------------
+------------               threads waiting                
+
 The data structure used to track priority donation was a list called "donations" with is a list_elem called "d_elem"
 that was part of the "thread struct". Essentially, whenever a lock is acquired by a thread, a list_elem corresponding to
 the thread inserted into the "donations" list. Then, when the original priority is to be given back to the thread, we look
