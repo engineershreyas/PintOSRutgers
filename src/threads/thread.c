@@ -362,7 +362,7 @@ thread_set_priority (int new_priority)
 
    else if (original_priority > new_priority)
     {
-      /*
+      
        if ( list_empty(&ready_list) )
      {
        return;
@@ -375,29 +375,8 @@ thread_set_priority (int new_priority)
     {
        thread_yield();
      }
-     */
 
-     if ( list_empty(&ready_list) )
-    {
-      return;
-    }
-  struct thread *t = list_entry(list_front(&ready_list),
-				struct thread, elem);
-  if (intr_context())
-    {
-      thread_ticks++;
-      if ( thread_current()->priority < t->priority ||
-	   (thread_ticks >= TIME_SLICE &&
-	    thread_current()->priority == t->priority) )
-	{
-	  intr_yield_on_return();
-	}
-      return;
-    }
-  if (thread_current()->priority < t->priority)
-    {
-      thread_yield();
-    }
+
 
     }
 
