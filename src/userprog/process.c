@@ -437,7 +437,7 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE;
+        *esp = PHYS_BASE- 12; //moving the stack down 12 bytes = 3 words = 1 1/2 bits to avoid pg fault - Jon Cheng;
       else
         palloc_free_page (kpage);
     }
