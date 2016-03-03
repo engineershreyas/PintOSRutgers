@@ -17,6 +17,34 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+//this struct allows us to reorder the string arguments so that we may push to the stack
+//in the correct order.
+//may need to dynamically allocate memory
+struct listString {
+  char* arg;
+  struct list_elem elem;
+}
+
+/*the "file_name" parameter contains the file name plus all the arguements
+eg file_name = "echo x y z" where the file name is echo and the arguements are x, y, z
+
+/* NOTE: when we return to PHYS_BASE, we are returning to the OS from the user program
+the fake address at the top of the stack is just to satisfy the requirements of C */
+
+/* for the argument string, you must allocate space on the stack for the amount of 
+char each string has "including terminating characters". HOWEVER, one you have 
+done that for every character, you must align the stack pointer to a multiple of 4
+this can be done using charSize % 4, then adding the remainder to the stack pointer */
+
+/*argv needs to point to the pointer of the first arguement (the file name), therefore
+argv is a char** */
+
+//use strlen in the string.h file
+//use strtok_r, this tokens each arguement and stores their pointers to an array (the last parameter of strtok_r)
+
+//REMEMBER: an array of pointers is essentially a 2d array (a pointer that points to pointers)
+//PHYS_BASE @ 0xc0000000 (see the loader.h file)
+//1 byte per character
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -26,17 +54,61 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
-process_execute (const char *file_name) 
+/*OCode = original code
+process_execute (const char *file_name)
+*/
+process_exeute(const char *file_name) //implement arbetrary number of arguements
 {
   char *fn_copy;
   tid_t tid;
 
+  //custom variables
+  void** stackPointer;
+  *stackPointer = PHYS_BASE - 12;
+  char** savePlace; //the save marker to iterate through every arguement using strtok_r()
+  char* token; //the return value of strtok_r()
+  struct listString stringElem; //allows us to push into a type "struct list"
+  struct list listOfArgs; //hold the args so we may push them to the stack after the next for loop
+  int argCount = 0; //used to make the array that contains the pointers to the values in the stack
+  //will have another integer that is set to argSize and will decrease based on the strings we place into the stack
+
+  //this for loop delimits the arguements and stores them into a list. first element is the last arguement
+  //we do this so we can place the arguements on the stack from the front to back
+  for (token = strtok_r(file_name, " ", savePlace); token != NULL; token = strtok(NULL, " ", savePlace) {
+    //must include the terminating character with the 
+    argCount++;
+    stringElem.arg = token;
+    list_push_front(&listOfArgs, &stringElem.elem);
+  }
+
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
+
+  /* OCode
   fn_copy = palloc_get_page (0);
+  */
+
+  //ASK TA ABOUT THIS
+  fn_copy = palloc_get_page(PHYS_BASE - 12) //initialize the user page at PHYS_BASE - 12
+
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
+
+
+  //this for loop pushes the arguements to the stack
+  size_t argSize;
+  struct list_elem e;
+  for (e = list_begin(&listOfArgs); e != list_end(&listOfArgs); e = list_next(&listOfArgs)) {
+    //starts from last arguement, and moves to first arguement
+    struct lestString *getString = list_entry(e, struct listString, elem);
+    argSize += strlen(getString->arg) - 1; //used to check word alingment after all arguements are pushed
+    *stackPointer = *stackPointer - (strlen(getString->arg) + 1); //move the stack pointer by the size of the arguement (including terminating character)
+    //insert to stack to fill newly allocated memory space
+    **stackPointer = *(getString->arg);
+    //removes the arguement just placed on stack from the list
+    list_pop_front(&listOfArgs);
+  }
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
@@ -64,6 +136,7 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
+    printf("%s: exit(%d) (by cedric blake)\n", *file_name, 0);
     thread_exit ();
 
   /* Start the user process by simulating a return from an
@@ -110,6 +183,7 @@ process_exit (void)
          directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
+      printf("%s: exit(%d) (by cedric blake)\n", *cur->name, 0); //name is declared as name[16] which is a pointer... i think
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
@@ -437,7 +511,7 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE- 12; //moving the stack down 12 bytes = 3 words = 1 1/2 bits to avoid pg fault - Jon Cheng;
+        *esp = PHYS_BASE - 12; //move the stack pointer down 3 words to avoid page fault
       else
         palloc_free_page (kpage);
     }
