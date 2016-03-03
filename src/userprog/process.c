@@ -17,50 +17,61 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+
+static thread_func start_process NO_RETURN;
+static bool load (const char *cmdline, void (**eip) (void), void **esp);
+
+
+/* use ctrl+f and type "TODO" to find what needs to be done next
+
+//currently running "make" on directory "pintos/src/userprog" to compile everything including process.c
+
+/*the "file_name" parameter contains the file name plus all the arguements
+eg file_name = "echo x y z" where the file name is echo and the arguements are x, y, z
+
+NOTE: when we return to PHYS_BASE, we are returning to the OS from the user program
+the fake address at the top of the stack is just to satisfy the requirements of C 
+
+ for the argument string, you must allocate space on the stack for the amount of 
+char each string has "including terminating characters". HOWEVER, one you have 
+done that for every character, you must align the stack pointer to a multiple of 4
+this can be done using charSize % 4, then adding the remainder to the stack pointer 
+
+argv needs to point to the pointer of the first arguement (the file name), therefore
+argv is a char**
+
+use strlen in the string.h file
+
+use strtok_r, this tokens each arguement and stores their pointers to an array (the last parameter of strtok_r)
+
+REMEMBER: an array of pointers is essentially a 2d array (a pointer that points to pointers)
+
+PHYS_BASE @ 0xc0000000 (see the loader.h file)
+
+1 byte per character */
+
+
 //this struct allows us to reorder the string arguments so that we may push to the stack
 //in the correct order.
 //may need to dynamically allocate memory
 struct listString {
   char* arg;
   struct list_elem elem;
-}
-
-/*the "file_name" parameter contains the file name plus all the arguements
-eg file_name = "echo x y z" where the file name is echo and the arguements are x, y, z
-
-/* NOTE: when we return to PHYS_BASE, we are returning to the OS from the user program
-the fake address at the top of the stack is just to satisfy the requirements of C */
-
-/* for the argument string, you must allocate space on the stack for the amount of 
-char each string has "including terminating characters". HOWEVER, one you have 
-done that for every character, you must align the stack pointer to a multiple of 4
-this can be done using charSize % 4, then adding the remainder to the stack pointer */
-
-/*argv needs to point to the pointer of the first arguement (the file name), therefore
-argv is a char** */
-
-//use strlen in the string.h file
-//use strtok_r, this tokens each arguement and stores their pointers to an array (the last parameter of strtok_r)
-
-//REMEMBER: an array of pointers is essentially a 2d array (a pointer that points to pointers)
-//PHYS_BASE @ 0xc0000000 (see the loader.h file)
-//1 byte per character
-
-static thread_func start_process NO_RETURN;
-static bool load (const char *cmdline, void (**eip) (void), void **esp);
+};
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
-tid_t
 /*OCode = original code
-process_execute (const char *file_name)
+tid_t process_execute (const char *file_name)
 */
-process_exeute(const char *file_name) //implement arbetrary number of arguements
+tid_t
+process_execute(const char *file_name) //implement arbetrary number of arguements
 {
   char *fn_copy;
   tid_t tid;
+  char* fName = (char *)file_name; //have to type convert from "const char*" to "char*"
 
   //custom variables
   void** stackPointer;
@@ -72,9 +83,8 @@ process_exeute(const char *file_name) //implement arbetrary number of arguements
 
   //this for loop delimits the arguements and stores them into a list. first element is the last arguement
   //we do this so we can place the arguements on the stack from the front to back
-  for (token = strtok_r(file_name, " ", savePlace); token != NULL; token = strtok(NULL, " ", savePlace) {
+  for (token = strtok_r(fName, " ", savePlace); token != NULL; token = strtok_r(NULL, " ", savePlace)) {
     //must include the terminating character with the 
-    argCount++;
     stringElem.arg = token;
     list_push_front(&listOfArgs, &stringElem.elem);
   }
@@ -87,7 +97,7 @@ process_exeute(const char *file_name) //implement arbetrary number of arguements
   */
 
   //ASK TA ABOUT THIS
-  fn_copy = palloc_get_page(PHYS_BASE - 12) //initialize the user page at PHYS_BASE - 12
+  fn_copy = palloc_get_page(1); //initialize the user page at PHYS_BASE - 12
 
   if (fn_copy == NULL)
     return TID_ERROR;
@@ -97,19 +107,30 @@ process_exeute(const char *file_name) //implement arbetrary number of arguements
   //this for loop pushes the arguements to the stack
   size_t argSize;
   size_t argCount = list_size(&listOfArgs);
-  struct list_elem e;
-  char* argAdderess[argCount]; //pointer that points to pointers of every string arguement
+  struct list_elem* e;
+  char* argAddress[argCount]; //pointer that points to pointers of every string arguement
   int index = 0; //to access the index of argAddress
-  for (e = list_begin(&listOfArgs); e != list_end(&listOfArgs); e = list_next(&listOfArgs)) {
+  for (e = list_begin(&listOfArgs); e != list_end(&listOfArgs); e = list_next(e)) {
     //starts from last arguement, and moves to first arguement
-    struct lestString *getString = list_entry(e, struct listString, elem);
+    struct listString *getString = list_entry(e, struct listString, elem);
     argSize += strlen(getString->arg) + 1; //used to check word alingment after all arguements are pushed
+
+
+    /* try this maybe?
+    //inserts into stack character by character
+    for (int i = 0; i < sizeof(getString->arg); ++i) {
+
+    } */
+
+    //TODO: currently getting an error when i attempt to store to the stack. i think its because i am attemting to 
+    //store the string at once rather than storing it character by character (a char* only points to the first char in an array)
+
     *stackPointer = *stackPointer - (strlen(getString->arg) + 1); //move the stack pointer by the size of the arguement (including terminating character)
     //add the pointer to this arguement to argAddress and incriment index
     argAddress[index] = *stackPointer;
     index++;
     //insert to stack to fill newly allocated memory space
-    **stackPointer = *(getString->arg);
+    *stackPointer = *(getString->arg);
     //removes the arguement just placed on stack from the list
     list_pop_front(&listOfArgs);
   }
