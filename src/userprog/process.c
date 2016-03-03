@@ -69,8 +69,6 @@ process_exeute(const char *file_name) //implement arbetrary number of arguements
   char* token; //the return value of strtok_r()
   struct listString stringElem; //allows us to push into a type "struct list"
   struct list listOfArgs; //hold the args so we may push them to the stack after the next for loop
-  int argCount = 0; //used to make the array that contains the pointers to the values in the stack
-  //will have another integer that is set to argSize and will decrease based on the strings we place into the stack
 
   //this for loop delimits the arguements and stores them into a list. first element is the last arguement
   //we do this so we can place the arguements on the stack from the front to back
@@ -98,17 +96,51 @@ process_exeute(const char *file_name) //implement arbetrary number of arguements
 
   //this for loop pushes the arguements to the stack
   size_t argSize;
+  size_t argCount = list_size(&listOfArgs);
   struct list_elem e;
+  char* argAdderess[argCount]; //pointer that points to pointers of every string arguement
+  int index = 0; //to access the index of argAddress
   for (e = list_begin(&listOfArgs); e != list_end(&listOfArgs); e = list_next(&listOfArgs)) {
     //starts from last arguement, and moves to first arguement
     struct lestString *getString = list_entry(e, struct listString, elem);
-    argSize += strlen(getString->arg) - 1; //used to check word alingment after all arguements are pushed
+    argSize += strlen(getString->arg) + 1; //used to check word alingment after all arguements are pushed
     *stackPointer = *stackPointer - (strlen(getString->arg) + 1); //move the stack pointer by the size of the arguement (including terminating character)
+    //add the pointer to this arguement to argAddress and incriment index
+    argAddress[index] = *stackPointer;
+    index++;
     //insert to stack to fill newly allocated memory space
     **stackPointer = *(getString->arg);
     //removes the arguement just placed on stack from the list
     list_pop_front(&listOfArgs);
   }
+
+  //realign the stack pointer
+  if (argSize % 4 != 0) {
+    r = argSize % 4;
+    *stackPointer -= r; //moves stack pointer to an address that is divisible by 4
+  }
+
+  //this for loop will push the addresses of each arguement to the stack
+  for(int i = 0; i != argCount; ++i) {
+    //move the stack pointer down one word
+    *stackPointer -= 4;
+    //push the address to the stack from the last arguement to the first arguement
+    **stackPointer = argAddress[i];
+    if(i == argCount - 1) {
+      //now we store argv itself (the pointer that points to the pointer of the first arguement)
+      *stackPointer -= 4;
+      //set this value to be the pointer that points to the pointer of arg[0]
+      **stackPointer = *stackPointer + 4;
+    }
+  }
+
+  //now we push the number of arguements
+  *stackPointer -= 4;
+  **stackPointer = argCount;
+
+  //finally, push a fake return address
+  *stackPointer -= 4;
+  **stackpointer = NULL;
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
