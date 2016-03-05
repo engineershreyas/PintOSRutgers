@@ -26,7 +26,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 //currently running "make" on directory "pintos/src/userprog" to compile everything including process.c
 
-/*the "file_name" parameter contains the file name plus all the arguements
+the "file_name" parameter contains the file name plus all the arguements
 eg file_name = "echo x y z" where the file name is echo and the arguements are x, y, z
 
 NOTE: when we return to PHYS_BASE, we are returning to the OS from the user program
@@ -71,11 +71,12 @@ process_execute(const char *file_name) //implement arbetrary number of arguement
 {
   char *fn_copy;
   tid_t tid;
-  char* fName = (char *)file_name; //have to type convert from "const char*" to "char*"
 
   //custom variables
-  void** stackPointer;
-  *stackPointer = PHYS_BASE - 12;
+  char* fName = (char *)file_name; //have to type convert from "const char*" to "char*"
+  char* termPointer = "\0";
+  void* stackPointer = PHYS_BASE - 12;
+  //*stackPointer = PHYS_BASE - 12;
   char** savePlace; //the save marker to iterate through every arguement using strtok_r()
   char* token; //the return value of strtok_r()
   struct listString stringElem; //allows us to push into a type "struct list"
@@ -105,7 +106,7 @@ process_execute(const char *file_name) //implement arbetrary number of arguement
 
 
   //this for loop pushes the arguements to the stack
-  size_t argSize;
+  size_t argSize = 0;
   size_t argCount = list_size(&listOfArgs);
   struct list_elem* e;
   char* argAddress[argCount]; //pointer that points to pointers of every string arguement
@@ -125,43 +126,56 @@ process_execute(const char *file_name) //implement arbetrary number of arguement
     //TODO: currently getting an error when i attempt to store to the stack. i think its because i am attemting to 
     //store the string at once rather than storing it character by character (a char* only points to the first char in an array)
 
-    *stackPointer = *stackPointer - (strlen(getString->arg) + 1); //move the stack pointer by the size of the arguement (including terminating character)
+    /*
+    when you need to push a value to the stack, always push the value BEFORE moving the stack pointer
+    */
+
     //add the pointer to this arguement to argAddress and incriment index
-    argAddress[index] = *stackPointer;
+    argAddress[index] = (char*)stackPointer;
+    printf("the address is currently 0x%08x\n", stackPointer);
     index++;
     //insert to stack to fill newly allocated memory space
-    *stackPointer = *(getString->arg);
+    //as a cast, a char* reads until the terminating character
+    strlcpy((char*)(stackPointer), getString->arg, strlen(getString->arg));
+
+
+    stackPointer = stackPointer - (strlen(getString->arg)); //move the stack pointer by the size of the arguement (including terminating character)
+    //now push in the terminating character
+    strlcpy((char*)(stackPointer), termPointer, 1);
+    stackPointer = stackPointer - 1;
+
     //removes the arguement just placed on stack from the list
     list_pop_front(&listOfArgs);
   }
 
   //realign the stack pointer
   if (argSize % 4 != 0) {
-    r = argSize % 4;
-    *stackPointer -= r; //moves stack pointer to an address that is divisible by 4
+    int r = argSize % 4;
+    stackPointer -= r; //moves stack pointer to an address that is divisible by 4
   }
 
-  //this for loop will push the addresses of each arguement to the stack
-  for(int i = 0; i != argCount; ++i) {
-    //move the stack pointer down one word
-    *stackPointer -= 4;
-    //push the address to the stack from the last arguement to the first arguement
-    **stackPointer = argAddress[i];
-    if(i == argCount - 1) {
-      //now we store argv itself (the pointer that points to the pointer of the first arguement)
-      *stackPointer -= 4;
-      //set this value to be the pointer that points to the pointer of arg[0]
-      **stackPointer = *stackPointer + 4;
-    }
-  }
+  // unsigned int i;
+  // //this for loop will push the addresses of each arguement to the stack
+  // for(i = 0; i != argCount; ++i) {
+  //   //push the address to the stack from the last arguement to the first arguement
+  //   *(char*)(stackPointer) = argAddress[i];
+  //   //move the stack pointer down one word
+  //   stackPointer -= 4;
+  //   if(i == argCount - 1) {
+  //     //now we store argv itself (the pointer that points to the pointer of the first arguement)
+  //     //set this value to be the pointer that points to the pointer of arg[0]
+  //     stackPointer = *(stackPointer + 4);
+  //     stackPointer -= 4;
+  //   }
+  // }
 
   //now we push the number of arguements
-  *stackPointer -= 4;
-  **stackPointer = argCount;
+  *(int*)stackPointer = argCount;
+  stackPointer -= 4;
 
   //finally, push a fake return address
-  *stackPointer -= 4;
-  **stackpointer = NULL;
+  *(int*)stackPointer = 0;
+  stackPointer -= 4;
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
@@ -189,7 +203,7 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
-    printf("%s: exit(%d) (by cedric blake)\n", *file_name, 0);
+    printf("%s: exit(%d) (by cedric blake)\n", (char*)file_name, 0);
     thread_exit ();
 
   /* Start the user process by simulating a return from an
@@ -214,6 +228,9 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  //changed to infinite loop to avoid power off before process executes
+  while (1) {
+  }
   return -1;
 }
 
@@ -236,7 +253,7 @@ process_exit (void)
          directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
-      printf("%s: exit(%d) (by cedric blake)\n", *cur->name, 0); //name is declared as name[16] which is a pointer... i think
+      printf("%s: exit(%d) (by cedric blake)\n", cur->name, 0); //name is declared as name[16] which is a pointer... i think
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
