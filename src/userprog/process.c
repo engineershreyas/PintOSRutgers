@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -76,6 +77,12 @@ process_execute(const char *file_name) //implement arbetrary number of arguement
   char* fName = (char *)file_name; //have to type convert from "const char*" to "char*"
   char* termPointer = "\0";
   void* stackPointer = PHYS_BASE - 12;
+
+  //write a simple c file to test that the stack pointer is still the same address
+  //this WILL move the stackptr, you need to move it back
+
+  realloc(stackPointer, 1024); //allocate 1kBytes to the stack
+  char* memalloc;
   //*stackPointer = PHYS_BASE - 12;
   char** savePlace; //the save marker to iterate through every arguement using strtok_r()
   char* token; //the return value of strtok_r()
@@ -116,66 +123,93 @@ process_execute(const char *file_name) //implement arbetrary number of arguement
     struct listString *getString = list_entry(e, struct listString, elem);
     argSize += strlen(getString->arg) + 1; //used to check word alingment after all arguements are pushed
 
+    if (e == list_begin(&listOfArgs)) { //if it is the first arguement in the list
+      //allocate memory based on the size of the string
+      memalloc = malloc(strlen(getString->arg));
+    } else {
+      //realloc adds to the size of the old block, so we specify the new size with argSize
+      memalloc = realloc(memalloc, argSize);
+    }
 
-    /* try this maybe?
-    //inserts into stack character by character
-    for (int i = 0; i < sizeof(getString->arg); ++i) {
+    //insert to allocated memory to fill newly allocated memory space
+    //as a cast, a char* reads until the terminating character
+    strlcpy(memalloc, getString->arg, strlen(getString->arg));
 
-    } */
+    //now pass in the terminating character
+    memalloc = realloc(memalloc, 1);
+    strlcpy(memalloc, termPointer, 1);
 
-    //TODO: currently getting an error when i attempt to store to the stack. i think its because i am attemting to 
-    //store the string at once rather than storing it character by character (a char* only points to the first char in an array)
+    //test if memalloc grows up or down
+    printf("the address of the malloc pointer is currently %p\n", memalloc);
 
-    /*
-    when you need to push a value to the stack, always push the value BEFORE moving the stack pointer
-    */
+    //memcpy copies without worrying about the datatype. it's basically typecasting the pointer
+    //for addresses, just declare something that is 4 bytes long (such as an int)
+    //declare as uint32
+    memcpy(stackPointer, memalloc, strlen(getString->arg));
 
     //add the pointer to this arguement to argAddress and incriment index
     argAddress[index] = (char*)stackPointer;
-    printf("the address is currently 0x%08x\n", stackPointer);
+    printf("the address is currently %p\n", stackPointer);
     index++;
-    //insert to stack to fill newly allocated memory space
-    //as a cast, a char* reads until the terminating character
-    strlcpy((char*)(stackPointer), getString->arg, strlen(getString->arg));
-
 
     stackPointer = stackPointer - (strlen(getString->arg)); //move the stack pointer by the size of the arguement (including terminating character)
-    //now push in the terminating character
-    strlcpy((char*)(stackPointer), termPointer, 1);
-    stackPointer = stackPointer - 1;
 
     //removes the arguement just placed on stack from the list
     list_pop_front(&listOfArgs);
+
   }
 
+  uint32_t pointerSize = 4;
+  char** memalloc2; //use this pointer to allocate memory for storing pointers
   //realign the stack pointer
   if (argSize % 4 != 0) {
-    int r = argSize % 4;
+    uint32_t r = argSize % 4;
     stackPointer -= r; //moves stack pointer to an address that is divisible by 4
   }
 
-  // unsigned int i;
-  // //this for loop will push the addresses of each arguement to the stack
-  // for(i = 0; i != argCount; ++i) {
-  //   //push the address to the stack from the last arguement to the first arguement
-  //   *(char*)(stackPointer) = argAddress[i];
-  //   //move the stack pointer down one word
-  //   stackPointer -= 4;
-  //   if(i == argCount - 1) {
-  //     //now we store argv itself (the pointer that points to the pointer of the first arguement)
-  //     //set this value to be the pointer that points to the pointer of arg[0]
-  //     stackPointer = *(stackPointer + 4);
-  //     stackPointer -= 4;
-  //   }
-  // }
+  unsigned int i;
+  //this for loop will push the addresses of each arguement to the stack
+  /*NOTE: getting a warning:
+  "warning: assignment makes integer from pointer without a cast"
+  */
+  for(i = 0; i != argCount; ++i) {
+    //push the address to the stack from the last arguement to the first arguement
+    if (i == 0) {
+      memalloc2 = malloc(pointerSize);
+    } else {
+      memalloc2 = realloc(memalloc2, pointerSize);
+    }
+
+    //store the address in the allocated memory
+    memalloc2 = &argAddress[i];
+    //copy the allocated memory to the stack
+    memcpy(stackPointer, memalloc2, pointerSize);
+    //move the stack pointer down one word
+    stackPointer -= pointerSize;
+
+    if(i == argCount - 1) {
+      //now we store argv itself (the pointer that points to the pointer of the first arguement)
+      //set this value to be the pointer that points to the pointer of arg[0]
+      char*** argVPoint = malloc(pointerSize);
+      *argVPoint = (char**)(stackPointer + pointerSize);
+      memcpy(stackPointer, argVPoint, pointerSize);
+      stackPointer -= pointerSize;
+    }
+  }
+
+  size_t* memalloc3;
 
   //now we push the number of arguements
-  *(int*)stackPointer = argCount;
-  stackPointer -= 4;
+  memalloc3 = malloc(sizeof(size_t));
+  memalloc3 = &argCount;
+  memcpy(stackPointer, memalloc3, sizeof(size_t));
+  stackPointer -= sizeof(size_t);
 
   //finally, push a fake return address
-  *(int*)stackPointer = 0;
-  stackPointer -= 4;
+  memalloc3 = realloc(memalloc3, sizeof(size_t));
+  memalloc3 = NULL;
+  memcpy(stackPointer, memalloc3, sizeof(size_t));
+  stackPointer -= sizeof(size_t);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
@@ -229,7 +263,8 @@ int
 process_wait (tid_t child_tid UNUSED) 
 {
   //changed to infinite loop to avoid power off before process executes
-  while (1) {
+  int loop = 0;
+  while (loop == 0) {
   }
   return -1;
 }
